@@ -5,6 +5,7 @@ from matplotlib import pyplot as plt
 
 from probability import inverse_normal_cdf
 from statistics import correlation
+from linear_algebra import shape, get_column, make_matrix
 
 #Processing Single dimension data
 
@@ -54,10 +55,64 @@ def run_two_demension_data_process():
     print(correlation(xs, ys2))
 
 
-#Processing Many dimension data
+#Processing Multy dimension data
+
+def correlation_matrix(data):
+    _, num_columns = shape(data)
+
+    def matrix_entry(i, j):
+        return correlation(get_column(data, i), get_column(data, j))
+    
+    return make_matrix(num_columns, num_columns, matrix_entry)
 
 
+def run_multy_dimension_data_process():
+    from typing import List
+
+    # Just some random data to show off correlation scatterplots
+    num_points = 100
+
+    def random_row() -> List[float]:
+       row = [0.0, 0, 0, 0]
+       row[0] = random_normal()
+       row[1] = -5 * row[0] + random_normal()
+       row[2] = row[0] + row[1] + 5 * random_normal()
+       row[3] = 6 if row[2] > -2 else 0
+       return row
+
+    random.seed(0)
+    # each row has 4 points, but really we want the columns
+    corr_rows = [random_row() for _ in range(num_points)]
+
+    corr_data = [list(col) for col in zip(*corr_rows)]
+
+    # corr_data is a list of four 100-d vectors
+    num_vectors = len(corr_data)
+    fig, ax = plt.subplots(num_vectors, num_vectors)
+
+    for i in range(num_vectors):
+        for j in range(num_vectors):
+
+            # Scatter column_j on the x-axis vs column_i on the y-axis,
+            if i != j: ax[i][j].scatter(corr_data[j], corr_data[i])
+
+            # unless i == j, in which case show the series name.
+            else: ax[i][j].annotate("series " + str(i), (0.5, 0.5),
+                                    xycoords='axes fraction',
+                                    ha="center", va="center")
+
+            # Then hide axis labels except left and bottom charts
+            if i < num_vectors - 1: ax[i][j].xaxis.set_visible(False)
+            if j > 0: ax[i][j].yaxis.set_visible(False)
+
+    # Fix the bottom right and top left axis labels, which are wrong because
+    # their charts only have text in them
+    ax[-1][-1].set_xlim(ax[0][-1].get_xlim())
+    ax[0][0].set_ylim(ax[0][1].get_ylim())
+
+    plt.show()
 
 if __name__ == "__main__":
     # run_single_demension_data_process()
-    run_two_demension_data_process()
+    # run_two_demension_data_process()
+    run_multy_dimension_data_process()
