@@ -2,6 +2,8 @@ import math
 import random
 from collections import Counter
 from matplotlib import pyplot as plt
+import dateutil.parser
+import csv
 
 from probability import inverse_normal_cdf
 from statistics import correlation
@@ -112,7 +114,54 @@ def run_multy_dimension_data_process():
 
     plt.show()
 
+# Cleaning and formatting
+
+def try_or_none(f):
+    def f_or_none(x):
+        try: return(f(x))
+        except: return None
+    return f_or_none
+
+def parse_row(input_row, parsers):
+    return [try_or_none(parser)(value) if parser is not None else value 
+            for value, parser in zip(input_row, parsers)]
+
+def parse_rows_with(reader, parsers):
+    for row in reader:
+        yield parse_row(row, parsers)
+    
+
+def run_parsing_exception_handling():
+    data = []
+    
+    with open("data_science_hints/resources/comma_delimited_stock_prices.csv", 'r') as f:
+        reader = csv.reader(f)
+        for line in parse_rows_with(reader, [dateutil.parser.parse, None, float]):
+            data.append(line)
+        
+        for row in data:
+            if any(x is None for x in row):
+                print(row)
+
+def try_parse_field(field_name, value, parser_dict):
+    parser = parser_dict.get(field_name)
+    if parser is not None:
+        return try_or_none(parser)(value)
+    else:
+        return value
+
+def parse_dict(input_dict, parser_dict):
+    return {field_name : try_parse_field(field_name, value, parser_dict)
+            for field_name, value in input_dict.items()}
+
+def run_dict_parser():
+    input_dict = {"first": "0.98", "second": 6.8, "third": "not float"}
+    parser_dict = {"first": float, "second": str, "third": float}
+    print(parse_dict(input_dict, parser_dict))
+
 if __name__ == "__main__":
     # run_single_demension_data_process()
     # run_two_demension_data_process()
-    run_multy_dimension_data_process()
+    # run_multy_dimension_data_process()
+    # run_parsing_exception_handling()
+    run_dict_parser()
