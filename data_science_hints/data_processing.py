@@ -1,9 +1,11 @@
 import math
 import random
-from collections import Counter
+from collections import Counter, defaultdict
 from matplotlib import pyplot as plt
 import dateutil.parser
 import csv
+import datetime
+from functools import reduce
 
 from probability import inverse_normal_cdf
 from statistics import correlation
@@ -159,9 +161,114 @@ def run_dict_parser():
     parser_dict = {"first": float, "second": str, "third": float}
     print(parse_dict(input_dict, parser_dict))
 
+# Data management
+
+def picker(field_name):
+    return lambda row: row[field_name]
+
+def pluck(field_name, rows):
+    """ convert list of dict to list of value with regards of field_name """
+    return map(picker(field_name), rows)
+
+def group_by(grouper, rows, value_transform=None):
+    grouped = defaultdict(list)
+    for row in rows:
+        grouped[grouper(row)].append(row)
+    if value_transform is None:
+        return grouped
+    else:
+        return {key: value_transform(rows)
+                for key, rows in grouped.items()}
+
+def run_data_management():
+    data = [
+    {'closing_price': 90.91,
+    'date': datetime.datetime(2014, 6, 20, 0, 0),
+    'symbol': 'AAPL'},
+    {'closing_price': 41.68,
+    'date': datetime.datetime(2014, 6, 20, 0, 0),
+    'symbol': 'MSFT'},
+    {'closing_price': 64.5,
+    'date': datetime.datetime(2014, 6, 20, 0, 0),
+    'symbol': 'FB'},
+    {'closing_price': 91.86,
+    'date': datetime.datetime(2014, 6, 19, 0, 0),
+    'symbol': 'AAPL'},
+    {'closing_price': 40.68,
+    'date': datetime.datetime(2014, 6, 19, 0, 0),
+    'symbol': 'MSFT'},
+    {'closing_price': 64.34,
+    'date': datetime.datetime(2014, 6, 19, 0, 0),
+    'symbol': 'FB'},
+]
+
+    max_price_by_symbol = group_by(picker("symbol"),
+                                data,
+                                lambda rows: max(pluck("closing_price", rows)))
+    
+    print(max_price_by_symbol)
+
+def percent_price_change(yesterday, today):
+    return today["closing_price"] / yesterday["closing_price"] - 1
+
+def day_over_day_changes(grouped_rows):
+    ordered = sorted(grouped_rows, key=picker("date"))
+    return [{"symbol": today["symbol"],
+                "date": today["date"],
+                "change": percent_price_change(yesterday, today)}
+            for yesterday, today in zip(ordered, ordered[1:])]
+
+# union of two percentages change
+# For example we have changes 10% and -20%
+# (1 + 10%)*(1 - 20%) - 1 = 1.1 * 0.8 - 1 = -12%
+def combine_pct_changes(pct_change1, pct_change2):
+    return (1 + pct_change1) * (1 + pct_change2) - 1
+
+def overall_change(changes):
+    return reduce(combine_pct_changes, pluck("change", changes))
+
+def run_management_hi():
+    data = [
+    {'closing_price': 90.91,
+    'date': datetime.datetime(2014, 6, 20, 0, 0),
+    'symbol': 'AAPL'},
+    {'closing_price': 41.68,
+    'date': datetime.datetime(2014, 6, 20, 0, 0),
+    'symbol': 'MSFT'},
+    {'closing_price': 64.5,
+    'date': datetime.datetime(2014, 6, 20, 0, 0),
+    'symbol': 'FB'},
+    {'closing_price': 91.86,
+    'date': datetime.datetime(2014, 6, 19, 0, 0),
+    'symbol': 'AAPL'},
+    {'closing_price': 40.68,
+    'date': datetime.datetime(2014, 6, 19, 0, 0),
+    'symbol': 'MSFT'},
+    {'closing_price': 64.34,
+    'date': datetime.datetime(2014, 6, 19, 0, 0),
+    'symbol': 'FB'},
+]
+    changes_by_symbol = group_by(picker("symbol"), data, day_over_day_changes)
+
+    all_changes = [change
+                    for changes in  changes_by_symbol.values()
+                    for change in changes]
+    
+    print("Max changes", max(all_changes, key=picker("change")))
+    print("Min changes", min(all_changes, key=picker("change")))
+
+    overall_change_by_month = group_by(lambda row: row['date'].month,
+                                        all_changes,
+                                        overall_change)
+
+    print("Overall change by month", overall_change_by_month)
+
+
 if __name__ == "__main__":
     # run_single_demension_data_process()
     # run_two_demension_data_process()
     # run_multy_dimension_data_process()
     # run_parsing_exception_handling()
-    run_dict_parser()
+    # run_dict_parser()
+    run_data_management()
+    run_management_hi()
