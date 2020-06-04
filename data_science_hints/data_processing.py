@@ -8,8 +8,8 @@ import datetime
 from functools import reduce
 
 from probability import inverse_normal_cdf
-from statistics import correlation
-from linear_algebra import shape, get_column, make_matrix
+from statistics import correlation, mean, standart_deviation
+from linear_algebra import shape, get_column, make_matrix, distance
 
 #Processing Single dimension data
 
@@ -263,6 +263,43 @@ def run_management_hi():
 
     print("Overall change by month", overall_change_by_month)
 
+# Scaling
+
+def scale(data_matrix):
+    num_rows, num_cols = shape(data_matrix)
+    means = [mean(get_column(data_matrix, j))
+                for j in range(num_cols)]
+    stdevs = [standart_deviation(get_column(data_matrix, j))
+                for j in range(num_cols)]
+    return means, stdevs
+
+def rescale(data_matrix):
+    means, stdevs = scale(data_matrix)
+    def rescaled(i, j):
+        if stdevs[j] > 0:
+            return (data_matrix[i][j] - means[j]) / stdevs[j]
+        else:
+            return data_matrix[i][j]
+    
+    num_rows, num_cols = shape(data_matrix)
+    return make_matrix(num_rows, num_cols, rescaled)
+
+def print_distances(data_matrix):
+    num_rows, num_cols = shape(data_matrix)
+    print("Distances:")
+    for i in range(num_rows):
+        for i_next in range(num_rows):
+            if i_next > i:
+                d = distance(data_matrix[i], data_matrix[i_next])
+                print(i, "to", i_next, d)     
+        
+def run_scale():
+    matrix = [  [63, 150],
+                [67, 160],
+                [70, 171]]
+    print_distances(matrix)
+    rescale_matrix = rescale(matrix)
+    print_distances(rescale_matrix)
 
 if __name__ == "__main__":
     # run_single_demension_data_process()
@@ -270,5 +307,6 @@ if __name__ == "__main__":
     # run_multy_dimension_data_process()
     # run_parsing_exception_handling()
     # run_dict_parser()
-    run_data_management()
-    run_management_hi()
+    # run_data_management()
+    # run_management_hi()
+    run_scale()
