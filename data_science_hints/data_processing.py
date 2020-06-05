@@ -5,11 +5,12 @@ from matplotlib import pyplot as plt
 import dateutil.parser
 import csv
 import datetime
-from functools import reduce
+from functools import reduce, partial
 
 from probability import inverse_normal_cdf
 from statistics import correlation, mean, standart_deviation
-from linear_algebra import shape, get_column, make_matrix, distance
+from linear_algebra import shape, get_column, make_matrix, distance, magnitude, dot, vector_sum
+from gradient_descent import maximize_batch
 
 #Processing Single dimension data
 
@@ -300,6 +301,40 @@ def run_scale():
     print_distances(matrix)
     rescale_matrix = rescale(matrix)
     print_distances(rescale_matrix)
+
+# Simplify dimensions
+
+def de_mean_matrix(A):
+    nr, nc = shape(A)
+    column_means, _ = scale(A)
+    return make_matrix(nr, nc, lambda i, j: A[i][j] - column_means[j])
+
+def direction(w):
+    mag = magnitude(w)
+    return [w_i / mag for w_i in w]
+
+def directional_variance_i(x_i, w):
+    return dot(x_i, direction(w)) ** 2
+
+def directional_variance(X, w):
+    return sum(directional_variance_i(x_i, w)
+                    for x_i in X)
+
+def directional_variance_gradient_i(x_i, w):
+    projection_length = dot(x_i, direction(w))
+    return [2 * projection_length * x_ij for x_ij in x_i]
+
+def directional_variance_gradient(X, w):
+    return vector_sum(directional_variance_gradient_i(x_i, w) for x_i in X)
+
+def first_principal_component(X):
+    guess = [1 for _ in X[0]]
+    unscaled_maximizer = maximize_batch(
+        partial(directional_variance, X),
+        partial(directional_variance_gradient, X),
+        guess
+    )
+    return direction(unscaled_maximizer)
 
 if __name__ == "__main__":
     # run_single_demension_data_process()
