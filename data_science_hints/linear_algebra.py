@@ -53,7 +53,7 @@ def distance_2(v,w):
 def shape(A):
     num_rows = len(A)
     num_cols = len(A[0]) if A else 0
-    return num_rows, num_rows
+    return num_rows, num_cols
 
 def get_row(A, i):
     return A[i]
