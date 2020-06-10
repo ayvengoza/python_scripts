@@ -9,8 +9,8 @@ from functools import reduce, partial
 
 from probability import inverse_normal_cdf
 from statistics import correlation, mean, standart_deviation
-from linear_algebra import shape, get_column, make_matrix, distance, magnitude, dot, vector_sum
-from gradient_descent import maximize_batch
+from linear_algebra import shape, get_column, make_matrix, distance, magnitude, dot, vector_sum, scalar_multiply, vector_substruct
+from gradient_descent import maximize_batch, maximize_stachastic
 
 #Processing Single dimension data
 
@@ -330,11 +330,46 @@ def directional_variance_gradient(X, w):
 def first_principal_component(X):
     guess = [1 for _ in X[0]]
     unscaled_maximizer = maximize_batch(
-        partial(directional_variance, X),
-        partial(directional_variance_gradient, X),
+        partial(directional_variance_i, X),
+        partial(directional_variance_gradient_i, X),
         guess
     )
     return direction(unscaled_maximizer)
+
+def first_principal_component_sgd(X):
+    guess = [1 for _ in range(X[0])]
+    unscaled_maximizer = maximize_stachastic(
+        lambda x, _, w: directional_variance_i(x, w),
+        lambda x, _, w: directional_variance_gradient_i(x, w),
+        X,
+        [None for _ in X],
+        guess
+    )
+    return direction(unscaled_maximizer)
+
+def project(v, w):
+    projection_length = dot(v, w)
+    return scalar_multiply(projection_length, w)
+
+def remove_projection_from_vector(v, w):
+    return vector_substruct(v, project(v, w))
+
+def remove_projection(X, w):
+    return [remove_projection_from_vector(x_i, w) for x_i in X]
+
+def principal_component_analysis(X, num_components):
+    components = []
+    for _ in range(num_components):
+        component = first_principal_component(x)
+        components.append(component)
+        X = remove_projection(X, component)
+    return components
+
+def transform_vector(v, components):
+    return [dot(v, w) for w in components]
+
+def transform(X, components):
+    return [transform_vector(x_i, components) for x_i in X]
 
 if __name__ == "__main__":
     # run_single_demension_data_process()
