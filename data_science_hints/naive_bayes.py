@@ -63,3 +63,15 @@ class NaiveBayesClassifier:
         prob_if_ham = math.exp(log_prob_if_ham)
         return prob_if_spam / (prob_if_spam + prob_if_ham)
 
+messages = [Message("spam rules", is_spam=True),
+            Message("ham rules", is_spam=False),
+            Message("hello ham", is_spam=False)]
+
+ham_text = "hello any"
+spam_text = "hello spam"
+
+model = NaiveBayesClassifier(k=0.5)
+model.train(messages)
+
+print(model.predict(ham_text))
+print(model.predict(spam_text))
