@@ -1,7 +1,9 @@
 from typing import Set, NamedTuple, List, Tuple, Dict, Iterable
 from collections import defaultdict
-import re
-import math
+from machine_learning import split_data
+
+from collections import Counter
+import re, math, glob, random
 
 
 def tokenize(text: str) -> Set[str]:
@@ -75,3 +77,41 @@ model.train(messages)
 
 print(model.predict(ham_text))
 print(model.predict(spam_text))
+
+def main():
+    path = "resources/spam_data/*/*"
+
+    data: List[Message] = []
+
+    for filename in glob.glob(path):
+        is_spam = "ham" not in filename
+        with open(filename, errors='ignore') as email_file:
+            for line in email_file:
+                if line.startswith("Subject: "):
+                    subject = line.lstrip("Subject: ")
+                    data.append(Message(subject, is_spam))
+                    break
+    random.seed(0)
+    train_messages, test_messages = split_data(data, 0.75)    
+
+    model = NaiveBayesClassifier()
+    model.train(train_messages)
+
+    predictions = [(message, model.predict(message.text))
+                    for  message in test_messages]
+    confusion_matrix = Counter((message.is_spam, spam_probability > 0.5)
+                                for message, spam_probability in predictions)
+    print(confusion_matrix)
+
+    def p_spam_given_token(token: str, model: NaiveBayesClassifier) -> float:
+        prob_if_spam, prob_if_ham = model._probabilities(token)
+        return prob_if_spam / (prob_if_spam + prob_if_ham)
+
+    words = sorted(model.tokens, key=lambda t: p_spam_given_token(t, model))
+
+    print("spamiest_words", words[-10:])
+    print("hamiest_words", words[:10])
+
+
+if __name__ == "__main__":
+    main()    
