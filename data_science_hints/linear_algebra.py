@@ -1,7 +1,10 @@
 from functools import reduce
 from math import sqrt
+from typing import List
 
 # Vectors
+
+Vector = List[float]
 
 def vector_add(v, w):
     return [v_i + w_i for v_i, w_i in zip(v, w)]
